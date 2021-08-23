@@ -1,47 +1,31 @@
 package dota.etl
 
-import akka.actor.ActorSystem
-import akka.stream.{Materializer, SystemMaterializer}
-import play.api.libs.ws.DefaultBodyReadables._
-import play.api.libs.ws.StandaloneWSClient
-import play.api.libs.ws.ahc.StandaloneAhcWSClient
-
-import scala.concurrent.ExecutionContext.Implicits._
-import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success, Try}
 
 object DotaETL {
 
-
-
   def main(args: Array[String]): Unit = {
 
-    // Create Akka system for thread and streaming management
-    implicit val system: ActorSystem = ActorSystem()
-    system.registerOnTermination {
-      System.exit(0)
+    val input = InputLoop.getInput
+
+    val maybeReply = WSClient.recentMatches()
+
+    Await.ready(maybeReply, Duration.Inf)
+
+    // This is kinda bad but I am not used to getting data from Futures and I don't know create DFs inside one.
+    /**
+    maybeReply.onComplete {
+      case Success(value) => new DotaSpark(value)
+      case Failure(exception) => sys.error(exception.getMessage)
     }
+    */
+    val value = maybeReply.value.orNull.get
 
-    implicit val materializer: Materializer = SystemMaterializer(system).materializer
+    // We move onto Spark
+    new DotaSpark(value)
 
-    // Create the standalone WS client
-    // no argument defaults to a AhcWSClientConfig created from
-    // "AhcWSClientConfigFactory.forConfig(ConfigFactory.load, this.getClass.getClassLoader)"
-    val wsClient = StandaloneAhcWSClient()
-
-    call(wsClient)
-      .andThen { case _ => wsClient.close() }
-      .andThen { case _ => system.terminate() }
-  }
-
-  def call(wsClient: StandaloneWSClient): Future[Unit] = {
-    // https://api.opendota.com/api/players/639740/recentMatches
-    val account_id = 639740
-    val url = s"https://api.opendota.com/api/players/${account_id}/recentMatches"
-
-    wsClient.url(url).get().map { response =>
-      val statusText: String = response.statusText
-      val body = response.body[String]
-      println(s"Got a response $statusText: $body")
-    }
+    WSClient.close()
   }
 }

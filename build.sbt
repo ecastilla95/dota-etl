@@ -18,5 +18,6 @@ libraryDependencies ++= Seq(
   "org.scalactic" %% "scalactic" % "3.2.9",
   "org.scalatest" %% "scalatest" % "3.2.9" % "test",
   // spark
-  "org.apache.spark" %% "spark-core" % sparkVersion
+  "org.apache.spark" %% "spark-core" % sparkVersion,
+  "org.apache.spark" %% "spark-sql" % sparkVersion
 )
