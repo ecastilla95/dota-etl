@@ -18,4 +18,5 @@ class DotaSpark(value: String) {
     val df = spark.read.json(dataset).select("match_id", "player_slot", "radiant_win", "kills", "deaths", "assists")
     df.show()
 
+    def close(): Unit = spark.close()
 }

@@ -1,20 +1,13 @@
 package dota.etl
 
 import akka.actor.ActorSystem
-import akka.stream.{Materializer, SystemMaterializer}
 import play.api.libs.ws.DefaultBodyReadables._
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 
-object WSClient {
-
-  // Create Akka system for thread and streaming management
-  implicit val system: ActorSystem = ActorSystem()
-  system.registerOnTermination { System.exit(0) }
-
-  implicit val materializer: Materializer = SystemMaterializer(system).materializer
+class WSClient(implicit val system: ActorSystem) {
 
   // Create the standalone WS client
   // no argument defaults to a AhcWSClientConfig created from
