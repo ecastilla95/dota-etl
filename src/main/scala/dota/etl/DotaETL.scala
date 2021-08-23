@@ -2,15 +2,20 @@ package dota.etl
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
 
 object DotaETL {
 
   def main(args: Array[String]): Unit = {
 
-    val input = InputLoop.getInput
+    val input = {
+      InputLoop.start()
+      InputLoop.getInput
+    }
 
-    val maybeReply = WSClient.recentMatches()
+    val maybeReply = input match {
+      case 10 => WSClient.recentMatches()
+      case _ => WSClient.matches()
+    }
 
     Await.ready(maybeReply, Duration.Inf)
 
