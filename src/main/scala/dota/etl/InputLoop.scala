@@ -22,7 +22,7 @@ object InputLoop {
     inputIsValid = result._2
   }
 
-  def handleInput(input: String): (Int, Boolean) = if (input == "") (10, true)
+  def handleInput(input: String): (Int, Boolean) = if (input == "") { (10, true) }
     else {
       parseInput(input).filter(x => 0 < x && x <= 20) match {
         case Success(value) => (value, true)

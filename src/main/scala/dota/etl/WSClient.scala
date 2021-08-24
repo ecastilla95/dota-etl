@@ -28,6 +28,18 @@ class WSClient(implicit val system: ActorSystem) {
     wsClient.url(url).get().map(_.body[String])
   }
 
+  def inspectMatch(id: Long): Future[String] = {
+    // https://api.opendota.com/api/matches/$id
+    val url = s"https://api.opendota.com/api/matches/${id}"
+    wsClient.url(url).get().map(_.body[String])
+  }
+
   def close(): Unit = wsClient.close()
+
+}
+
+object WSClient {
+
+  val DefaultMatchesSize = 10
 
 }

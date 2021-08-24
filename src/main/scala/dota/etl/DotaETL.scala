@@ -2,6 +2,7 @@ package dota.etl
 
 import akka.actor.ActorSystem
 import akka.stream.{Materializer, SystemMaterializer}
+import dota.etl.WSClient.DefaultMatchesSize
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -23,8 +24,9 @@ object DotaETL {
       InputLoop.getInput
     }
 
+    // Not really necessary but it doesn't hurt to call a more specific method when possible
     val maybeReply = input match {
-      case 10 => wsClient.recentMatches()
+      case DefaultMatchesSize => wsClient.recentMatches()
       case _ => wsClient.matches()
     }
 
@@ -38,10 +40,11 @@ object DotaETL {
     */
     val value = maybeReply.value.orNull.get
 
-    // We move onto Spark
-    val ds = new DotaSpark(value)
+    // We move onto Spark // TODO FIXME
+    val matches = DotaSpark.parseMatches(value, input)
+    // TODO continue
 
-    ds.close()
+    DotaSpark.close()
     system.terminate()
   }
 }
