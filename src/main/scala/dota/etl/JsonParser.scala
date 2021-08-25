@@ -2,14 +2,14 @@ package dota.etl
 
 import dota.etl.WSClient.DefaultMatchesSize
 import org.apache.spark.sql.functions.{col, explode}
-import org.apache.spark.sql.{Column, DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.types.{IntegerType, StructType}
+import org.apache.spark.sql._
 
-object DotaSpark {
+object JsonParser {
 
   private val spark = SparkSession.builder
     .master("local")
-    .appName("DotaSpark")
-    //      .config("spark.some.config.option", "some-value")
+    .appName("JsonParser")
     .getOrCreate()
 
   import spark.implicits._
@@ -39,17 +39,30 @@ object DotaSpark {
     val dataset: Dataset[String] = spark.createDataset[String](Seq(text))
 
     // These fields are the ones that we will use in order to calculate KPIs
-    val interestingFields: Seq[Column] = Seq(
+    val interestingFields: Seq[Column] = $"match_id" +: // To identify the match
+      Seq(
       "player_slot", // To identify the player
       "assists", "deaths", "kills", "isRadiant", // Self explanatory fields
       "win" // 1 if win, 0 otherwise
-    ).map( x => col("players." + x)) // Renaming to match the structure name we will give to the players array
+    ).map{ x =>
+      val name = col("players." + x) // Renaming to match the structure name we will give to the players array
+      x match {
+        case "isRadiant" => name.as(x) // Flattening the names once selected
+        case _ => name.cast(IntegerType).as(x) // Casting unnecessary longs
+      }
+    }
 
     // Parsed DF
     spark.read.json(dataset)
       // Successive selects for readability purposes
-      .select(explode($"players").as("players"))
+      .select($"match_id", explode($"players").as("players"))
       .select(interestingFields: _*)
+
+  }
+
+  def createDataFrame(data: Seq[Row], schema: StructType): DataFrame = {
+    val rdd = spark.sparkContext.parallelize(data)
+    spark.createDataFrame(rdd, schema)
   }
 
   def close(): Unit = spark.close()

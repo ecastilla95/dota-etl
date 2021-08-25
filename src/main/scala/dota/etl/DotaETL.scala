@@ -41,10 +41,10 @@ object DotaETL {
     val value = maybeReply.value.orNull.get
 
     // We move onto Spark // TODO FIXME
-    val matches = DotaSpark.parseMatches(value, input)
+    val matches = JsonParser.parseMatches(value, input)
     // TODO continue
 
-    DotaSpark.close()
+    JsonParser.close()
     system.terminate()
   }
 }
