@@ -11,7 +11,9 @@ import scala.util.{Failure, Success}
 class WSClientTest extends AnyFunSuite {
 
   implicit val system: ActorSystem = ActorSystem()
-  system.registerOnTermination { System.exit(0) }
+  system.registerOnTermination {
+    System.exit(0)
+  }
   implicit val materializer: Materializer = SystemMaterializer(system).materializer
 
   // WSClient
@@ -24,7 +26,7 @@ class WSClientTest extends AnyFunSuite {
     val maybeReply = wsClient.recentMatches()
     Await.ready(maybeReply, Duration.Inf)
 
-    maybeReply.onComplete{
+    maybeReply.onComplete {
       case Success(value) => println(value)
       case Failure(exception) => println(exception)
     }
@@ -36,7 +38,7 @@ class WSClientTest extends AnyFunSuite {
     val maybeReply = wsClient.matches()
     Await.ready(maybeReply, Duration.Inf)
 
-    maybeReply.onComplete{
+    maybeReply.onComplete {
       case Success(value) => println(value)
       case Failure(exception) => println(exception)
     }
@@ -45,10 +47,28 @@ class WSClientTest extends AnyFunSuite {
 
   test("inspectMatch method") {
 
-    val maybeReply = wsClient.inspectMatch(6135452599L)
+    val exampleMatch = 6135452599L
+    val maybeReply = wsClient.inspectMatch(exampleMatch)
     Await.ready(maybeReply, Duration.Inf)
 
-    maybeReply.onComplete{
+    maybeReply.onComplete {
+      case Success(value) => println(value)
+      case Failure(exception) => println(exception)
+    }
+
+  }
+
+  test("inspectMatches method") {
+
+    // scalastyle:off
+    val exampleMatches = Seq(6135452599L, 6135408545L, 6134018090L, 6127211062L, 6126666493L,
+      6126623611L, 6126574298L, 6125948851L, 6125877819L, 6125833122L)
+    // scalastyle:on
+
+    val maybeReply = wsClient.inspectMatches(exampleMatches)
+    Await.ready(maybeReply, Duration.Inf)
+
+    maybeReply.onComplete {
       case Success(value) => println(value)
       case Failure(exception) => println(exception)
     }

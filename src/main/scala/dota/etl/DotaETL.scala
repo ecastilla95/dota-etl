@@ -3,9 +3,11 @@ package dota.etl
 import akka.actor.ActorSystem
 import akka.stream.{Materializer, SystemMaterializer}
 import dota.etl.WSClient.DefaultMatchesSize
+import org.apache.spark.sql.DataFrame
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.util.Success
 
 object DotaETL {
 
@@ -41,8 +43,10 @@ object DotaETL {
     val value = maybeReply.value.orNull.get
 
     // We move onto Spark // TODO FIXME
-    val matches = JsonParser.parseMatches(value, input)
-    // TODO continue
+    val matches: DataFrame = JsonParser.parseMatches(value, input)
+
+    val matchIds = matches.select("match_id").distinct().collect().map(_.getAs[Long]("match_id"))
+    // TODO: continue
 
     JsonParser.close()
     system.terminate()

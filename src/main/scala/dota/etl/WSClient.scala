@@ -34,6 +34,9 @@ class WSClient(implicit val system: ActorSystem) {
     wsClient.url(url).get().map(_.body[String])
   }
 
+  def inspectMatches(ids: Seq[Long]): Future[String] = Future.sequence(ids.map(inspectMatch))
+    .map(list => "[" + list.reduce(_ + "," + _) + "]")
+
   def close(): Unit = wsClient.close()
 
 }
