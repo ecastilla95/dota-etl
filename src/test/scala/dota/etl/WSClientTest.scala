@@ -1,6 +1,7 @@
+package dota.etl
+
 import akka.actor.ActorSystem
 import akka.stream.{Materializer, SystemMaterializer}
-import dota.etl.WSClient
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.Await

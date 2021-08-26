@@ -1,4 +1,5 @@
-import dota.etl.InputLoop
+package dota.etl
+
 import org.scalatest.funsuite.AnyFunSuite
 
 class InputLoopTest extends AnyFunSuite {
