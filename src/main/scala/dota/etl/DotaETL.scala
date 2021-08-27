@@ -14,23 +14,23 @@ object DotaETL {
 
   def main(args: Array[String]): Unit = {
 
+    // Create Akka system for thread and streaming management
+    implicit val system: ActorSystem = ActorSystem()
+    system.registerOnTermination {
+      System.exit(0)
+    }
+    implicit val materializer: Materializer = SystemMaterializer(system).materializer
+
+    // WSClient
+    val wsClient = new WSClient()
+
+    val input = {
+      InputLoop.start()
+      InputLoop.getInput
+    }
+
     // Start the process and the timer
     Timer.time {
-
-      // Create Akka system for thread and streaming management
-      implicit val system: ActorSystem = ActorSystem()
-      system.registerOnTermination {
-        System.exit(0)
-      }
-      implicit val materializer: Materializer = SystemMaterializer(system).materializer
-
-      // WSClient
-      val wsClient = new WSClient()
-
-      val input = {
-        InputLoop.start()
-        InputLoop.getInput
-      }
 
       // Not really necessary but it doesn't hurt to call a more specific method when possible
       val maybeReply = input match {
@@ -50,15 +50,19 @@ object DotaETL {
       val maybeMatches: Future[String] = wsClient.inspectMatches(matchIds)
 
       Await.ready(maybeMatches, Duration.Inf)
-      val matches = maybeReply.value.orNull.get
+      val matches = maybeMatches.value.orNull.get
       val parsedMatches = JsonParser.parseMatchList(matches)
 
       // We start handling the dataframe operations
       val playerPerformance = DataAnalytics.playerPerformance(playerMatchHistory)
       val teamKills = DataAnalytics.teamKills(parsedMatches)
-      val completePerformance = DataAnalytics.completePerformance(teamKills, playerPerformance)
+      val result = {
+        import DataAnalytics.{completePerformance, summary, toJson}
+        // Functional showoff
+        ((completePerformance _).tupled andThen summary andThen toJson)((teamKills, playerPerformance))
+      }
 
-      completePerformance.show()
+      println(result)
 
       JsonParser.close()
       system.terminate()

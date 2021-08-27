@@ -1,11 +1,13 @@
 package dota.etl.spark
 
 import dota.etl.WSClient.DefaultMatchesSize
-import org.apache.spark.sql.functions.{col, explode}
+import org.apache.spark.sql.functions.{col, explode, length, lit, when}
 import org.apache.spark.sql.types.{IntegerType, StructType}
 import org.apache.spark.sql._
 
 object JsonParser extends SharedSparkSession {
+
+  private val direLength = 3
 
   import spark.implicits._
 
@@ -20,7 +22,9 @@ object JsonParser extends SharedSparkSession {
   def parsePlayerMatchHistory(text: String, n: Int = DefaultMatchesSize): DataFrame = {
     val dataset: Dataset[String] = spark.createDataset[String](Seq(text))
     spark.read.json(dataset)
-      .select("match_id", "player_slot", "radiant_win", "kills", "deaths", "assists")
+      // This columns converts single digit values into Radiant and 1XX values into Dire
+      .withColumn("isRadiant", when(length(col("player_slot")) === direLength, false).otherwise(true))
+      .select("match_id", "isRadiant", "radiant_win", "kills", "deaths", "assists")
       .limit(n).toDF()
   }
 
