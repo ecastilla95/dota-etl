@@ -3,7 +3,7 @@ package dota.etl
 import akka.actor.ActorSystem
 import akka.stream.{Materializer, SystemMaterializer}
 import dota.etl.WSClient.DefaultMatchesSize
-import dota.etl.spark.JsonParser
+import dota.etl.spark.{DataAnalytics, JsonParser}
 import org.apache.spark.sql.DataFrame
 
 import scala.concurrent.{Await, Future}
@@ -43,8 +43,8 @@ object DotaETL {
       val value = maybeReply.value.orNull.get
 
       // We inspect the response in order to find the last played matches
-      val playerMatchHistory = JsonParser.parsePlayerMatchHistory(value, input) // TODO: continue here
-      val matchIds = playerMatchHistory.select("match_id").distinct().collect().map(_.getAs[Long]("match_id"))
+      val playerMatchHistory = JsonParser.parsePlayerMatchHistory(value, input)
+      val matchIds = DataAnalytics.extractIds(playerMatchHistory)
 
       // We call the API for details on the last played matches
       val maybeMatches: Future[String] = wsClient.inspectMatches(matchIds)
@@ -52,6 +52,13 @@ object DotaETL {
       Await.ready(maybeMatches, Duration.Inf)
       val matches = maybeReply.value.orNull.get
       val parsedMatches = JsonParser.parseMatchList(matches)
+
+      // We start handling the dataframe operations
+      val playerPerformance = DataAnalytics.playerPerformance(playerMatchHistory)
+      val teamKills = DataAnalytics.teamKills(parsedMatches)
+      val completePerformance = DataAnalytics.completePerformance(teamKills, playerPerformance)
+
+      completePerformance.show()
 
       JsonParser.close()
       system.terminate()
