@@ -4,15 +4,16 @@ import akka.actor.ActorSystem
 import akka.stream.{Materializer, SystemMaterializer}
 import dota.etl.WSClient.DefaultMatchesSize
 import dota.etl.spark.{DataAnalytics, JsonParser}
-import org.apache.spark.sql.DataFrame
 
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.Duration
-import scala.util.Success
+import scala.language.postfixOps
 
 object DotaETL {
 
   def main(args: Array[String]): Unit = {
+
+    val timeout = 60 seconds
 
     // Create Akka system for thread and streaming management
     implicit val system: ActorSystem = ActorSystem()
@@ -38,31 +39,27 @@ object DotaETL {
         case _ => wsClient.matches()
       }
 
-      Await.ready(maybeReply, Duration.Inf)
+      Await.ready(maybeReply, timeout)
       // This is kinda bad but I am not used to working with Futures.
-      val value = maybeReply.value.orNull.get
+      val eitherValueOrException = WSClient.handleResponse(maybeReply)
 
       // We inspect the response in order to find the last played matches
-      val playerMatchHistory = JsonParser.parsePlayerMatchHistory(value, input)
-      val matchIds = DataAnalytics.extractIds(playerMatchHistory)
+      val eitherResultOrException = eitherValueOrException.map { value =>
+        val playerMatchHistory = JsonParser.parsePlayerMatchHistory(value, input)
+        val matchIds = DataAnalytics.extractIds(playerMatchHistory)
+        // We call the API for details on the last played matches
+        val maybeMatches: Future[String] = wsClient.inspectMatches(matchIds)
 
-      // We call the API for details on the last played matches
-      val maybeMatches: Future[String] = wsClient.inspectMatches(matchIds)
-
-      Await.ready(maybeMatches, Duration.Inf)
-      val matches = maybeMatches.value.orNull.get
-      val parsedMatches = JsonParser.parseMatchList(matches)
-
-      // We start handling the dataframe operations
-      val playerPerformance = DataAnalytics.playerPerformance(playerMatchHistory)
-      val teamKills = DataAnalytics.teamKills(parsedMatches)
-      val result = {
-        import DataAnalytics.{completePerformance, summary, toJson}
-        // Functional showoff
-        ((completePerformance _).tupled andThen summary andThen toJson)((teamKills, playerPerformance))
+        Await.ready(maybeMatches, timeout)
+        val eitherMatchesOrException = WSClient.handleResponse(maybeMatches)
+        eitherMatchesOrException.map { matches =>
+          val parsedMatches = JsonParser.parseMatchList(matches)
+          // See DataAnalytics to understand the dataframe operations
+          DataAnalytics.analyze((playerMatchHistory, parsedMatches))
+        }
       }
 
-      println(result)
+      println(eitherResultOrException)
 
       JsonParser.close()
       system.terminate()

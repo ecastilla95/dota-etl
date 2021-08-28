@@ -14,6 +14,8 @@ val sparkVersion = "3.1.2"
 libraryDependencies ++= Seq(
   // http requests
   "com.typesafe.play" %% "play-ahc-ws-standalone" % "2.1.3",
+  // scala logging
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
   // scalatest
   "org.scalactic" %% "scalactic" % "3.2.9",
   "org.scalatest" %% "scalatest" % "3.2.9" % "test",

@@ -57,4 +57,18 @@ object DataAnalytics extends SharedSparkSession {
     .select(to_json(struct(col("*"))).alias("summary"))
     .first() // We know there is only one record
     .mkString("")
+
+  // Functional showoff
+  val analyze: ((DataFrame, DataFrame)) => String = {
+    data => // data is composed of two dataframes: playerMatchHistory and parsedMatches
+      // We create this function that applies the playerPerformance method to df playerMatchHistory
+      // and the teamKills method to df parsedMatches
+      val separatePerformances: (DataFrame, DataFrame) => (DataFrame, DataFrame) =
+        (playerMatchHistory, parsedMatches) => (playerPerformance(playerMatchHistory), teamKills(parsedMatches))
+      // Then we compose all these functions:
+      // 1) separatePerformances with input data and output a duple (playerPerformance, teamKills)
+      // 2) completePerformance joins these two dfs into the complete performance df
+      // 3) from this df we calculate the summary information and we convert to JSON
+      (separatePerformances.tupled andThen (completePerformance _).tupled andThen summary andThen toJson)(data)
+  }
 }

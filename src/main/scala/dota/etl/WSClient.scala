@@ -6,6 +6,7 @@ import play.api.libs.ws.ahc.StandaloneAhcWSClient
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 class WSClient(implicit val system: ActorSystem) {
 
@@ -34,8 +35,9 @@ class WSClient(implicit val system: ActorSystem) {
     wsClient.url(url).get().map(_.body[String])
   }
 
-  def inspectMatches(ids: Seq[Long]): Future[String] = Future.sequence(ids.map(inspectMatch))
-    .map(list => "[" + list.reduce(_ + "," + _) + "]")
+  def inspectMatches(ids: Seq[Long]): Future[String] =
+    Future.sequence(ids.map(inspectMatch))
+      .map(list => "[" + list.reduce(_ + "," + _) + "]")
 
   def close(): Unit = wsClient.close()
 
@@ -44,5 +46,14 @@ class WSClient(implicit val system: ActorSystem) {
 object WSClient {
 
   val DefaultMatchesSize = 10
+
+  def handleResponse[T](future: Future[T]): Either[Throwable, T] =
+    future.value match {
+      case Some(value) => value match {
+        case Success(good) => Right(good)
+        case Failure(exception) => Left(exception)
+      }
+      case None => Left(new Exception("Connection to the API timed out"))
+    }
 
 }
