@@ -2,6 +2,7 @@ package dota.etl
 
 import akka.actor.ActorSystem
 import akka.stream.{Materializer, SystemMaterializer}
+import com.typesafe.scalalogging.Logger
 import dota.etl.WSClient.DefaultMatchesSize
 import dota.etl.spark.{DataAnalytics, JsonParser}
 
@@ -13,6 +14,12 @@ object DotaETL {
 
   def main(args: Array[String]): Unit = {
 
+    // Fancy way of getting the logger to have the object name
+    val objectName = this.getClass.getName.filter(_ != '$')
+    implicit val logger: Logger = Logger(objectName)
+
+    logger.info(s"$objectName's main method starting")
+
     val timeout = 60 seconds
 
     // Create Akka system for thread and streaming management
@@ -23,6 +30,7 @@ object DotaETL {
     implicit val materializer: Materializer = SystemMaterializer(system).materializer
 
     // WSClient
+    logger.info(s"Initializing web socket client")
     val wsClient = new WSClient()
 
     val input = {
@@ -30,6 +38,7 @@ object DotaETL {
       InputLoop.getInput
     }
 
+    logger.info(s"Input is $input, starting the timer...")
     // Start the process and the timer
     Timer.time {
 
@@ -39,17 +48,18 @@ object DotaETL {
         case _ => wsClient.matches()
       }
 
+      logger.info(s"Awaiting $timeout for API response")
       Await.ready(maybeReply, timeout)
-      // This is kinda bad but I am not used to working with Futures.
       val eitherValueOrException = WSClient.handleResponse(maybeReply)
 
       // We inspect the response in order to find the last played matches
-      val eitherResultOrException = eitherValueOrException.map { value =>
+      val eitherResultOrException = eitherValueOrException.flatMap { value =>
         val playerMatchHistory = JsonParser.parsePlayerMatchHistory(value, input)
         val matchIds = DataAnalytics.extractIds(playerMatchHistory)
         // We call the API for details on the last played matches
         val maybeMatches: Future[String] = wsClient.inspectMatches(matchIds)
 
+        logger.info(s"Awaiting $timeout for API response")
         Await.ready(maybeMatches, timeout)
         val eitherMatchesOrException = WSClient.handleResponse(maybeMatches)
         eitherMatchesOrException.map { matches =>
@@ -59,7 +69,13 @@ object DotaETL {
         }
       }
 
-      println(eitherResultOrException)
+      eitherResultOrException match {
+        case Right(value) => logger.info(
+          s"""
+            |${JsonParser.prettify(value)}
+            |""".stripMargin)
+        case Left(exception) => logger.info(JsonParser.prettify(s"""{"exception": "${exception.getMessage}"}"""))
+      }
 
       JsonParser.close()
       system.terminate()

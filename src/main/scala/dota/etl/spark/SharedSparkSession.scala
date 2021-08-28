@@ -1,5 +1,6 @@
 package dota.etl.spark
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
@@ -9,6 +10,9 @@ trait SharedSparkSession {
     .master("local")
     .appName("SharedSparkSession")
     .getOrCreate()
+
+  Logger.getLogger("org.apache").setLevel(Level.OFF)
+  Logger.getLogger("akka").setLevel(Level.OFF)
 
   def readDf(path: String, schema: StructType): DataFrame = spark.read
     .option("header", value = true)

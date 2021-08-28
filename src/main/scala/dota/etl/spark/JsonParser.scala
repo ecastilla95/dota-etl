@@ -1,9 +1,10 @@
 package dota.etl.spark
 
 import dota.etl.WSClient.DefaultMatchesSize
-import org.apache.spark.sql.functions.{col, explode, length, lit, when}
-import org.apache.spark.sql.types.{IntegerType, StructType}
 import org.apache.spark.sql._
+import org.apache.spark.sql.functions.{col, explode, length, when}
+import org.apache.spark.sql.types.IntegerType
+import play.api.libs.json.Json
 
 object JsonParser extends SharedSparkSession {
 
@@ -76,5 +77,7 @@ object JsonParser extends SharedSparkSession {
       .select(interestingFields: _*)
 
   }
+
+  def prettify(string: String): String = Json.prettyPrint(Json.parse(string))
 
 }

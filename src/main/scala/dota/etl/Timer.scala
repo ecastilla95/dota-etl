@@ -1,5 +1,7 @@
 package dota.etl
 
+import com.typesafe.scalalogging.Logger
+
 object Timer {
 
   /**
@@ -8,11 +10,11 @@ object Timer {
    * @tparam A return type of f
    * @return
    */
-  def time[A](f: => A): A = {
+  def time[A](f: => A)(implicit logger: Logger): A = {
     val t0 = System.nanoTime()
     val result = f
     val t1 = System.nanoTime()
-    println("Elapsed time: " + (t1 - t0) + "ns")
+    logger.info("Elapsed time: " + (t1 - t0) + "ns")
     result
 
   }
