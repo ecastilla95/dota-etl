@@ -12,6 +12,10 @@ import scala.language.postfixOps
 
 object DotaETL {
 
+  /**
+   * Main method
+   * @param args not used
+   */
   def main(args: Array[String]): Unit = {
 
     // Fancy way of getting the logger to have the object name
@@ -72,11 +76,13 @@ object DotaETL {
       eitherResultOrException match {
         case Right(value) => logger.info(
           s"""
+            |Logging data for Dota games of user YrikGood:
             |${JsonParser.prettify(value)}
             |""".stripMargin)
         case Left(exception) => logger.info(JsonParser.prettify(s"""{"exception": "${exception.getMessage}"}"""))
       }
 
+      logger.info(s"Matches studied: $input")
       JsonParser.close()
       system.terminate()
     }

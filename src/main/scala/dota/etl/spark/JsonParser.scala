@@ -78,6 +78,11 @@ object JsonParser extends SharedSparkSession {
 
   }
 
+  /**
+   * Prettifies a JSON string
+   * @param string JSON string
+   * @return prettified JSON string
+   */
   def prettify(string: String): String = Json.prettyPrint(Json.parse(string))
 
 }

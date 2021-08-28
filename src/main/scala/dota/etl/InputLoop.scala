@@ -11,6 +11,10 @@ object InputLoop {
   private var inputIsValid = false
 
   // Input loop
+
+  /**
+   * Starts the IO loop until a valid value is input
+   */
   def start(): Unit = while (!inputIsValid) {
     val input = scala.io.StdIn.readLine("""
         |How many matches would you like to check?
@@ -22,6 +26,11 @@ object InputLoop {
     inputIsValid = result._2
   }
 
+  /**
+   * Checks if the input is valid
+   * @param input input to check
+   * @return numeric value if possible and boolean validity flag
+   */
   def handleInput(input: String): (Int, Boolean) = if (input == "") {
     (10, true)
   }
@@ -34,5 +43,9 @@ object InputLoop {
     }
   }
 
+  /**
+   * Gets input
+   * @return input
+   */
   def getInput: Int = n
 }
